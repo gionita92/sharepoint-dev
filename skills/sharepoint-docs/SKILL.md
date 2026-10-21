@@ -12,7 +12,8 @@ source of truth.
 All paths below are relative to this skill's folder (the folder containing this SKILL.md).
 
 `references/SOURCE` records the sp-dev-docs commit and date this copy was taken from. Read it when the user asks
-how current the docs are, or when a question is about something released after that date.
+how current the docs are, or when a question is about something released after that date: if so, say the bundled
+docs may predate it.
 
 ## Areas
 
@@ -33,7 +34,7 @@ If the question is about one of those, say the bundled docs don't cover it.
 
 ## How to look something up
 
-1. **Search the indexes first.** Each index line is `- <path> — <title> — <description>`. Use Grep with a few
+1. **Search the indexes first.** Each index line is `- <path> — <title> — <description> — updated <date>`. Use Grep with a few
    keywords (case-insensitive) across `references/index/`, or on just the one or two areas that fit the question.
    Try synonyms if the first search misses (for example "property pane" / "web part properties",
    "ACE" / "Adaptive Card Extension").
@@ -44,12 +45,36 @@ If the question is about one of those, say the bundled docs don't cover it.
    (except the small ones: business-apps, design, features, scenario-guidance, declarative-customization).
 4. **Follow includes and links when they matter.** `[!INCLUDE ...](../../includes/...)` and relative `.md` links
    resolve against the page's own folder within `references/`.
-5. **Answer.** Cite the page(s) you used by path, mention the page's `ms.date` if the topic is time-sensitive, and
-   quote commands or code samples exactly as the docs give them.
+5. **Answer.** Cite the page(s) you used by path with the `updated` date from the index, and quote commands or
+   code samples exactly as the docs give them.
+
+## Freshness
+
+The `updated` date in each index row is the page's last upstream commit. Ignore `ms.date` in page frontmatter:
+it's often years older than the real last edit. For time-sensitive topics (versions, tooling, setup, deprecations,
+retirements), if a page you rely on hasn't been updated in two years or more, say so and suggest checking the
+live page. Newer pages win when two pages disagree.
+
+## Code samples
+
+`references/samples/` indexes the PnP community samples, one line per sample: title — type · framework · SPFx
+version · updated · PnP controls — description — GitHub URL. There's one file per repo: `webparts.md`,
+`extensions.md` (application customizers, field customizers, command sets, form customizers) and `aces.md`
+(Adaptive Card Extensions).
+
+- Search them only when an example would help: the user asks for a sample, a starting point, or "how do I build
+  X". Don't search them for conceptual or API questions the docs answer.
+- Grep with a few keywords (component type, feature, library). Offer the best 1–3 matches with their URLs.
+- Only the index is bundled, not the code. Link to the sample, and don't describe its implementation beyond
+  the index line unless you fetch it.
+- Mention each sample's SPFx version. If it's several minor versions behind the user's project, warn that it may
+  need upgrading before it builds.
 
 ## SPFx version awareness
 
-- Check which SPFx version the user is on (`@microsoft/sp-core-library` in their `package.json`, or ask).
+- Check which SPFx version the user is on. The plugin's session-start hook usually puts it in context already
+  ("SPFx project detected: … uses SPFx x.y.z (Heft|gulp toolchain)"); use that. Otherwise read
+  `@microsoft/sp-core-library` in their `package.json`, and ask only if there's no project to read.
 - SPFx v1.22.0 and later use the **Heft** toolchain; v1.21.1 and earlier use **gulp**. Many pages have commands for
   both, so give the ones that match the user's version.
 - For "what's new" or upgrade questions, read the matching `references/docs/spfx/release-<version>.md`.

@@ -20,7 +20,9 @@ jobs:
         with:
           repository: SharePoint/sp-dev-docs
           path: upstream
-          fetch-depth: 1
+          # Full history (without old file contents) so the indexes can show each page's last-updated date.
+          fetch-depth: 0
+          filter: blob:none
           sparse-checkout: |
             docs
             includes
@@ -37,19 +39,27 @@ jobs:
             exit 0
           fi
           echo "Syncing from SharePoint/sp-dev-docs@${upstream:0:7} (last bundled: ${last:0:7})..."
-          python3 scripts/sync-docs.py upstream 2> warnings.txt
+          python3 scripts/sync-docs.py upstream 2>> warnings.txt
+          echo "Docs sync finished."
+
+      - name: Sync samples
+        run: |
+          touch warnings.txt
+          echo "Rebuilding the PnP samples index..."
+          python3 scripts/sync-samples.py 2>> warnings.txt
           while IFS= read -r line; do
-            [ -n "$line" ] && echo "::warning title=Unbundled upstream area::${line#warning: }"
+            [ -n "$line" ] && echo "::warning title=Sync warning::${line#warning: }"
           done < warnings.txt
-          echo "Sync finished."
+          echo "Samples sync finished."
 
       - name: Detect changes
         id: changes
         run: |
           sha=$(git -C upstream rev-parse --short HEAD)
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
-          # SOURCE always changes with the upstream commit; only count real doc changes.
-          changed_files=$(git status --porcelain -- skills/ ':!skills/sharepoint-docs/references/SOURCE')
+          # The SOURCE files always change with the upstream commits; only count real doc/sample changes.
+          changed_files=$(git status --porcelain -- skills/ ':!skills/sharepoint-docs/references/SOURCE' \
+            ':!skills/sharepoint-docs/references/samples/SOURCE')
           if [ -n "$changed_files" ]; then
             count=$(echo "$changed_files" | wc -l | tr -d ' ')
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -58,11 +68,14 @@ jobs:
             echo "$changed_files" | head -50
             if [ "$count" -gt 50 ]; then echo "...and $((count - 50)) more"; fi
           else
-            echo "::notice title=No changes::No new doc changes detected in sp-dev-docs@$sha. Skipping version bump and PR."
+            echo "::notice title=No changes::No new doc or sample changes detected. Skipping version bump and PR."
           fi
           {
             echo "warnings<<EOF"
             cat warnings.txt
+            echo "EOF"
+            echo "samples<<EOF"
+            sed 's/^/- /' skills/sharepoint-docs/references/samples/SOURCE
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -86,10 +99,14 @@ jobs:
           add-paths: |
             skills/
             .claude-plugin/
-          commit-message: "Sync docs from SharePoint/sp-dev-docs@${{ steps.changes.outputs.sha }}"
-          title: "Sync docs from sp-dev-docs@${{ steps.changes.outputs.sha }}"
+          commit-message: "Sync docs and samples (sp-dev-docs@${{ steps.changes.outputs.sha }})"
+          title: "Sync docs and samples (sp-dev-docs@${{ steps.changes.outputs.sha }})"
           body: |
-            Automated sync from https://github.com/SharePoint/sp-dev-docs/commit/${{ steps.changes.outputs.sha }}.
+            Automated sync from https://github.com/SharePoint/sp-dev-docs/commit/${{ steps.changes.outputs.sha }}
+            and the PnP sample repos:
+
+            ${{ steps.changes.outputs.samples }}
+
             Review the diff, then merge to release the new version.
 
             ${{ steps.changes.outputs.warnings }}
@@ -112,7 +129,7 @@ jobs:
             if [ -z "$SHA" ]; then
               echo "Sync failed before changes could be checked. See the step logs."
             elif [ "$CHANGED" != "true" ]; then
-              echo "No new doc changes detected in \`sp-dev-docs@$SHA\`. Skipped version bump and PR."
+              echo "No new doc or sample changes detected (\`sp-dev-docs@$SHA\`). Skipped version bump and PR."
             else
               echo "- Upstream: \`sp-dev-docs@$SHA\`"
               echo "- Files changed: $COUNT"
