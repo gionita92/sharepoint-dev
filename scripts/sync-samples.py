@@ -27,7 +27,13 @@ def clone(repo, dest):
         subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, text=True)
 
     git("clone", "--depth", "1", "--filter=blob:none", "--sparse", f"https://github.com/{repo}.git", str(dest))
-    git("sparse-checkout", "set", "--no-cone", "/samples/*/assets/sample.json", cwd=dest)
+    git("sparse-checkout", "set", "--no-cone", "/samples/*/[Aa]ssets/[Ss]ample.json", cwd=dest)
+
+
+def sample_files(checkout):
+    """Each sample's assets/sample.json, matched case-insensitively (a few samples use Assets/)."""
+    return sorted(p for p in (checkout / "samples").glob("*/*/*")
+                  if p.parent.name.lower() == "assets" and p.name.lower() == "sample.json")
 
 
 def one_line(text):
@@ -57,8 +63,7 @@ def sample_row(path):
 
 
 def sync_repo(name, repo, checkout, changes, keep):
-    rows = [row for path in sorted((checkout / "samples").glob("*/assets/sample.json"))
-            if (row := sample_row(path))]
+    rows = [row for path in sample_files(checkout) if (row := sample_row(path))]
     index = SAMPLES / f"{name}.md"
     header = (f"# Samples: {repo}\n\nOne line per sample: title — type · framework · SPFx version · updated"
               " — description — URL. Index only; the code lives on GitHub.\n\n")
