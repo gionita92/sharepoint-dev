@@ -1,0 +1,317 @@
+---
+title: Implement Continuous Integration and Continuous deployment using Azure DevOps
+description: Streamlining the build and deployment process by automating manual steps.
+ms.date: 06/13/2022
+ms.localizationpriority: high
+---
+
+# Implement Continuous Integration and Continuous deployment using Azure DevOps
+
+Azure DevOps (Visual Studio Team Services/Team Foundation Server) consists of a set of tools and services that help developers implement DevOps, Continuous Integration, and Continuous Deployment processes for their development projects.
+
+This article explains the steps involved in setting up your Azure DevOps environment with Continuous Integration and Continuous Deployment to automate your SharePoint Framework builds, unit tests, and deployment.
+
+> [!NOTE]
+> Starting with **SPFx v1.22.0**, the build system uses [Heft](https://rushstack.io/pages/heft/overview/) instead of Gulp. For Heft-based pipelines, see [Azure DevOps Multi-stage Pipelines](./implement-ci-cd-with-azure-pipelines.md). For legacy Gulp-based projects (SPFx v1.0 - v1.21.x), this article applies. To migrate to Heft, see [Migrate from the Gulp Toolchain to Heft Toolchain](./migrate-gulptoolchain-hefttoolchain.md).
+
+## Choosing between Azure Multi-stage Pipelines (preview) and Azure DevOps builds and releases
+
+There are currently two approaches available to implement continuous integration, and deployment in Azure DevOps.
+Azure builds and releases is the historic one, featuring a graphical edition experience and storing the definitions in a JSON document hidden from the user.
+
+Both approaches are described for the SharePoint Framework:
+
+- Azure Build and Release (this article)
+- [Azure Multi-stage Pipelines](./implement-ci-cd-with-azure-pipelines.md)
+
+## Continuous Integration
+
+Continuous Integration (CI) helps developers integrate code into a shared repository by automatically verifying the build using unit tests and packaging the solution each time new code changes are submitted.
+
+Setting up Azure DevOps for Continuous Integration with a SharePoint Framework solution requires the following steps:
+
+1. Creating the Build Definition
+1. Installing NodeJS
+1. Restoring dependencies
+1. Executing Unit Tests
+1. Importing test results
+1. Importing code coverage information
+1. Bundling the solution
+1. Packaging the solution
+1. Preparing the artifacts
+1. Publishing the artifacts
+
+### Creating the Build Definition
+
+The Build Definition, as its name suggests, includes all the definitions and their configurations for the build. Start setting up your Continuous Integration by creating a new build definition and link it to your repository.
+
+![linking the build definition to the repository](../../images/azure-devops-spfx-01.png)
+
+> [!NOTE]
+> Build definitions can be described as a process template. It's a set of configured tasks that will be executed one after another on the source code every time a build is triggered. Tasks can be grouped in phases, by default a build definition contains at least one phase. You can add new tasks to the phase by clicking on the large plus sign next to the phase name.
+
+### Installing NodeJS
+
+Once the Build Definition has been created, the first thing you need to do is install NodeJS. Make sure to install a supported version for your SPFx project (Node 18.x or later for SPFx 1.22+).
+
+![Screenshot of the Select a Source screen with the Azure Repos Git option being highlighted.](../../images/azure-devops-spfx-02.png)
+
+> [!NOTE]
+> Make sure you specify the appropriate Node version in the `Version Spec` field. For SPFx 1.22+, use `22.x` (LTS). For SPFx 1.20-1.21.x, use `18.x`.
+
+### Restoring dependencies
+
+Because third party dependencies aren't stored in the source control, you need to restore those before starting to build the project. To do so add a `npm` task and set the command to `install`.
+
+![installing dependencies](../../images/azure-devops-spfx-03.png)
+
+### Executing Unit Tests
+
+The SharePoint Framework doesn't provide a testing framework by default (since 1.8.0), we'll use Jest with this sample. These modules will be installed in a later step and it's highly recommended at a minimum to test the business logic of your code to get feedback on any potential issues or regressions as soon as possible. To have Azure DevOps execute your unit tests, add a `npm` task. Set the `command` to `custom` and `custom command` field, enter `test`. Then set the `Working Directory` option to `$(Build.SourcesDirectory)`.
+
+![executing unit tests](../../images/azure-devops-spfx-04.png)
+
+#### Configuring Jest
+
+By default SharePoint Framework projects doesn't include a testing framework. We'll use Jest in this sample.
+
+```console
+npm i jest jest-junit @voitanos/jest-preset-spfx-react16 -D
+```
+
+> [!NOTE]
+> Projects generated on SharePoint Framework v1.7.1 and earlier rely on React v15. If you're using React v15, you need to install **@voitanos/jest-preset-spfx-react15** instead. For other Frameworks (Knockout, ...) you might need to install a different preset instead.
+
+You also need to configure Jest, to do so create a file **config/jest.config.json** and add the following content.
+
+```JSON
+{
+  "preset": "@voitanos/jest-preset-spfx-react16",
+  "rootDir": "../src",
+  "coverageReporters": [
+    "text",
+    "json",
+    "lcov",
+    "text-summary",
+    "cobertura"
+  ],
+  "reporters": [
+    "default",
+    ["jest-junit", {
+      "suiteName": "jest tests",
+      "outputDirectory": "temp/test/junit",
+      "outputName": "junit.xml"
+    }]
+  ]
+}
+```
+
+You also need to configure your project to use jest when typing commands. To do so edit the **package.json** file and add/replace these two `scripts` with the following values:
+
+```JSON
+"test": "./node_modules/.bin/jest --config ./config/jest.config.json",
+"test:watch": "./node_modules/.bin/jest --config ./config/jest.config.json --watchAll"
+```
+
+#### Writing a unit test
+
+To write your first unit test, create a new file **src/webparts/webPartName/tests/webPartName.spec.ts** and add the following content:
+
+```typescript
+import 'jest'
+
+describe("webPartName", () => {
+  test("should add numbers Sync fluent", () => {
+    const result = 1 + 3;
+    expect(result).toBe(4); // fluent API
+  });
+});
+```
+
+> [!NOTE]
+> You can learn more about writing unit tests using Jest [here](https://jestjs.io/docs/en/getting-started.html). You can learn more about testing react applications with Jest and Enzyme [here](https://archive.jestjs.io/docs/en/23.x/tutorial-react) (you can ignore the setup part).
+
+### Importing test results
+
+In order to get test results information attached with the build results, you need to import these test results from the test runner into Azure DevOps. To do so, add a new `Publish Test Results` task. Set the `Test results files` field to `**/junit.xml` and the `Search folder` to `$(Build.SourcesDirectory)`.
+
+![importing test results](../../images/azure-devops-spfx-04b.png)
+
+### Importing code coverage information
+
+In order to get code coverage reported with the build status you need to add a task to import that information. To configure the code coverage information, add the `publish code coverage results` tasks. Make sure you set the tool to `Cobertura`, `Summary files` to `$(Build.SourcesDirectory)/**/*-coverage.xml`.
+
+![importing coverage information](../../images/azure-devops-spfx-05.png)
+
+### Bundling the solution
+
+You first need to bundle your solution in order to get static assets that can be understood by a web browser.
+
+**For SPFx 1.22+ (Heft-based):** Add a `Command Line` task and run the following command:
+
+```console
+heft build --clean --production
+```
+
+**For SPFx 1.0 - 1.21.x (Gulp-based):** Add another `gulp` task, set the `gulpfile` path, set the `Gulp Tasks` field to bundle and add `--ship` in the `Arguments`.
+
+![bundling the assets](../../images/azure-devops-spfx-06.png)
+
+### Packaging the solution
+
+Now that you have static assets, the next step is to combine the assets into a package SharePoint will be able to deploy.
+
+**For SPFx 1.22+ (Heft-based):** Add a `Command Line` task and run the following command:
+
+```console
+heft package-solution --production
+```
+
+**For SPFx 1.0 - 1.21.x (Gulp-based):** Add another `gulp` task, set the `gulpfile` path, set the `Gulp Tasks` field to `package-solution` and add `--ship` in the `Arguments`.
+
+![packaging the solution](../../images/azure-devops-spfx-07.png)
+
+### Preparing the artifacts
+
+By default, an Azure DevOps build doesn't retain any files. To ensure that the required files needed for the release are retained, you need to explicitly indicate which files should be kept.
+
+Add a `Copy Files` task and set the `Contents` to `**\*.sppkg` (the SharePoint Package created with the previous task) and the target folder to `$(build.artifactstagingdirectory)/drop`.
+
+![grabbing the artifacts](../../images/azure-devops-spfx-08.png)
+
+### Publishing the artifacts
+
+Now that you have collected all the files needed for deployment in a special artifacts folder, you still need to instruct Azure DevOps to keep these files after the execution of the build. To do so add a `Publish artifacts` task and set the `Path to publish` to `$(build.artifactstagingdirectory)/drop` and the `Artifact name` to `drop`.
+
+![publishing the artifacts](../../images/azure-devops-spfx-09.png)
+
+## Continuous Deployment
+
+Continuous Deployment (CD) takes validated code packages from build process and deploys them into a staging or production environment. Developers can track which deployments were successful or not and narrow down issues to specific package versions.
+
+Setting up Azure DevOps for Continuous Deployments with a SharePoint Framework solution requires the following steps:
+
+1. Creating the Release Definition
+1. Linking the Build Artifact
+1. Creating the Environment
+1. Installing NodeJS
+1. Installing the CLI for Microsoft 365
+1. Connecting to the App Catalog
+1. Adding the Solution Package to the App Catalog
+1. Deploying the Application
+1. Setting the Variables for the Environment
+
+### Creating the Release Definition
+
+Start by creating a new Release Definition with an empty template. A Release Definition is a process that is used to identify the following elements for the deployment:
+
+- Environment
+- Deployment tasks
+- Build artifacts
+
+![creating the release definition](../../images/azure-devops-spfx-10.png)
+
+### Linking the Build Artifact
+
+Select on `Add an artifact` and select the build definition you previously created. Write down the `Source Alias` name you set, as you'll need to use it in subsequent tasks.
+
+![linking the artifacts](../../images/azure-devops-spfx-11.png)
+
+### Creating the Environment
+
+When you create your continuous deployment environment, you can give a name and configure pre-deployment approvals, artifact filters (i.e. deploy only if the build comes from this or that branch), and much more by clicking on the buttons around the environment box or directly on the title.
+
+![creating the environment](../../images/azure-devops-spfx-12.png)
+
+### Installing NodeJS
+
+By select on `1 job, 0 tasks` you can access the tasks configuration view, which works similarly to the build definition. Here, you can select the set of tasks that will run only for this specific environment. This includes installing the appropriate NodeJS version for your project.
+
+Add a `Node tool installer` task and define the appropriate version in the `Version Spec` field (use `22.X` for SPFx 1.22+).
+
+![Screenshot of the Node.js Tool Installer screen, showing the Display name and Version Spec fields.](../../images/azure-devops-spfx-13.png)
+
+### Installing the CLI for Microsoft 365
+
+The Microsoft 365 Common Language Interface (CLI) is an open-source project built by the Microsoft 365 PnP Community. In order to use the CLI as part of your Release Definition, you first need to install it. Then, you'll be able to take advantage of commands available to handle deployment. Add a `npm` task, select a `Custom` command and type `install -g @pnp/cli-microsoft365` in the `Command and Arguments` field.
+
+![installing CLI for Microsoft 365](../../images/azure-devops-spfx-node.png)
+
+> [!NOTE]
+> Learn more about the [CLI for Microsoft 365](https://pnp.github.io/cli-microsoft365/)
+
+### Connecting to SharePoint Online
+
+Before using the App Catalog in your deployment environment, you first need to authenticate against the App Catalog of your tenant. To do so, add a `Command Line` task and paste in the following command into the `script` field `m365 login -t password -u $(username) -p $(password)`.
+
+![connecting to the app catalog](../../images/azure-devops-spfx-15.png)
+
+> [!NOTE]
+> If you're using CLI for Microsoft 365 to connect to your tenant for the first time, you need to perform an interactive sign-in with the account first. This is required to grant access to PnP Office 365 Management Shell application that is used by CLI for Microsoft 365 to access your tenant on the account's behalf. Your task will otherwise fail to sign-in non-interactively. Details available on CLI for Microsoft 365 [User Guide](https://pnp.github.io/cli-microsoft365/user-guide/connecting-microsoft-365/).
+
+[!INCLUDE [pnp-o365cli](../../../includes/snippets/open-source/pnp-o365cli.md)]
+
+### Adding the Solution Package to the App Catalog
+
+Upload the solution package to your App Catalog by adding another `Command Line` task and pasting the following command line in the `Script` field `m365 spo app add -p $(System.DefaultWorkingDirectory)/SpFxDevOps/drop/SharePoint/solution/sp-fx-devops.sppkg --overwrite`
+
+> [!NOTE]
+> The path of the package depends on your solution name (see your project configuration) and the `Source Alias` you defined earlier, make sure they match.
+
+> [!NOTE]
+> You can upload a solution to a site collection app catalog by adding `--appCatalogUrl https://$(tenant).sharepoint.com/$(catalogsite) --scope sitecollection`
+
+![uploading the package to the catalog](../../images/azure-devops-spfx-16.png)
+
+### Deploying the Application
+
+The final step in the setup is to deploy the application to the App Catalog to make it available to all site collections within the tenant as its latest version. Add another `Command Line` task and paste the following command line in the `Script` field `m365 spo app deploy --name sp-fx-devops.sppkg`
+
+> [!NOTE]
+> Make sure you update the package name.
+
+> [!NOTE]
+> You can deploy a solution from a site collection app catalog by adding `--appCatalogUrl https://$(tenant).sharepoint.com/$(catalogsite) --scope sitecollection`
+
+![Deploying the package to the catalog](../../images/azure-devops-spfx-17.png)
+
+### Setting the Variables for the Environment
+
+The tasks you configured in the last step rely on Azure DevOps process variables (easily identified with the `$(variableName)` syntax). You need to define those variables before being able to run the build definition. To do so, select on the `Variables` tab.
+Add the following variables
+
+| Name | Value |
+| ------ | ------ |
+| catalogsite | Optional. Server relative Path of the App Catalog Site for example, `sites/appcatalog` when uploading to a [site collection App Catalog](../../general-development/site-collection-app-catalog.md) |
+| password | Password of the user with administrative permissions on the tenant, don't forget to check the lockpad to mask it to other users |
+| username | Username of the user with administrative permissions on the tenant |
+| tenant | Optional. Tenant name in `https://tenant.sharepoint.com` for example, `tenant` when uploading to a site collection App Catalog |
+
+![Variables setup](../../images/azure-devops-spfx-18.png)
+
+> [!NOTE]
+> Make sure you save your release definition.
+
+## Testing
+
+To test your newly created Continuous Deployment process, return to the `Builds` section in Azure DevOps, select your build definition and select on `Queue`. Select your branch and select on `Queue`. A new build will be created and will start building.
+
+![Queuing a build](../../images/azure-devops-spfx-19.png)
+
+After a couple of minutes, your build should complete and show a result page like this one.
+
+![Results of a build](../../images/azure-devops-spfx-20.png)
+
+If you navigate to the `Release` section of Azure DevOps, a new release should have started automatically. After a few minutes your release should complete, and your SharePoint Framework solution is deployed to your tenant.
+
+![Results of a release](../../images/azure-devops-spfx-21.png)
+
+Your DevOps pipeline for your SharePoint Framework solution in Azure DevOps is now set up and ready to be customized further to your scenario.
+
+## See Also
+
+- [SharePoint Framework Overview](../sharepoint-framework-overview.md)
+- [Sample Project on GitHub](https://github.com/SharePoint/sp-dev-build-extensions/tree/master/samples/azure-devops-ci-cd-spfx)
+- [Heft-based toolchain (SPFx v1.22.0+)](./sharepoint-framework-toolchain-rushstack-heft.md)
+- [Migrate from the Gulp Toolchain to Heft Toolchain](./migrate-gulptoolchain-hefttoolchain.md)
+- [Integrate Gulp Tasks in the build pipeline](./integrate-gulp-tasks-in-build-pipeline.md) (legacy)

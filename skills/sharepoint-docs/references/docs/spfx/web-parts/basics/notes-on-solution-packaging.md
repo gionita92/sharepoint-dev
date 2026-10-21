@@ -1,0 +1,129 @@
+---
+title: SharePoint solution packaging
+description: The package-solution Heft task looks at /config/package-solution.json for various configuration details in SharePoint Framework, including ISolution and IFeature definitions.
+ms.date: 03/11/2026
+ms.localizationpriority: high
+---
+# SharePoint solution packaging
+
+The **package-solution** Heft task looks at **./config/package-solution.json** for various configuration details, including some generic filepaths, and defines the relationship between components (*WebParts* and *Applications*) in a package.
+
+The schema for the configuration file is as follows:
+
+```typescript
+interface IPackageSolutionTaskConfig {
+  paths?: {
+    packageDir?: string;
+    debugDir?: string;
+    zippedPackage?: string;
+    featureXmlDir?: string;
+    manifestsMatch?: string;
+    manifestDir?: string;
+    sharepointAssetDir?: string;
+  };
+  solution?: ISolution;
+}
+```
+
+Each package configuration file has some optional settings to override the places where the task looks for various source files and manifests, and define the location to write the package. Additionally, it has a required solution definition, which instructs the packager on the relationships of various components.
+
+## Solution definition (ISolution)
+
+```typescript
+interface ISolution {
+  name: string;
+  id: string;
+  title?: string;
+  supportedLocales?: string[];
+  version?: string;
+  features?: IFeature[];
+  iconPath?: string;
+  skipFeatureDeployment?: boolean;
+}
+```
+
+Each solution file must have a `name` that identifies the package in the SharePoint UI. Additionally, each package must include a globally unique identifier (`id`) used internally by SharePoint. Optionally, you may specify a `version` in the format "X.X.X.X" to identify package versions during upgrades.
+
+> [!NOTE]
+> The versioning system only applies to Feature Framework and SharePoint Feature definitions included in the package. Code and assets from the new version of the package are available as soon as the new version of the package is added to App Catalog, with no need to update the app on sites.
+
+The solution definition also optionally contains a list of SharePoint Feature definitions.
+
+> [!NOTE]
+> If the `features` property is omitted, the task creates a single Feature for every component (a 1:1 mapping). An empty array produces no features, and the web parts are not added.
+
+## Feature definition (IFeature)
+
+```typescript
+interface IFeature {
+  title: string;
+  description: string;
+  id: string;
+  version?: string;
+  componentIds?: string[];
+  components: IComponent[];
+  assets: ISharepointAssets<string>;
+}
+```
+
+It's important to note that this is a definition for creating a SharePoint feature, and that some of these options are exposed in the UI. As with the solution, each feature has a mandatory `title`, `description`, `id`, and `version` (in the X.X.X.X format). The feature `id` should also be a globally unique identifier.
+
+Each feature can also contain any number of components that are activated when the feature is activated. This is defined via a list of `componentIds`, which are globally unique identifiers that *must* match the `ID` in the component's manifest file. If this list is undefined or empty, the packager includes *every* component in the feature. Any given `componentId` may only belong to one feature.
+
+## File paths
+
+```typescript
+interface IPackageSolutionTaskConfig {
+  paths?: {
+    packageDir?: string;
+    debugDir?: string;
+    zippedPackage?: string;
+    featureXmlDir?: string;
+    manifestsMatch?: string;
+    manifestDir?: string;
+    sharepointAssetDir?: string;
+  };
+  solution?: ISolution;
+}
+```
+
+- `packageDir`: Packaging root folder. Defaults to `./sharepoint`. All other paths are relative to this folder.
+- `debugDir`: Folder to write the raw package to disk for debugging. Defaults to `solution/debug`.
+- `zippedPackage`: Name of the sppkg file to create (including extension). Defaults to `ClientSolution.sppkg`.
+- `featureXmlDir`: Folder containing the custom feature XML to import into the package. Defaults to `feature_xml`.
+
+  > [!IMPORTANT]
+  > Note that all files in this folder are included in the SPPKG; however, you must create a **.rels** file for your custom feature for it to be included in the package manifest.
+
+- `manifestsMatch`: Glob to match against to find manifest files. Looks in **dist/** when running in normal, but in **deploy/** for production.
+- `manifestDir`: Path to the folder where manifests are stored. Defaults to `buildConfig.distFolder`.
+- `sharepointAssetDir`: Directory containing SharePoint assets (such as feature elements, element manifests, and upgrade actions), which are automatically included in the SharePoint package. Defaults to `assets`.
+
+## Examples
+
+### Default configuration
+
+```json
+{
+  "solution": {
+    "name": "spfx-hello-world-client-side-solution",
+    "id": "77fd2eed-55b0-42bf-8b4d-f66730cb0c34",
+    "version": "1.0.0.0"
+  },
+  "paths": {
+    "zippedPackage": "solution/spfx-hello-world.sppkg"
+  }
+}
+```
+
+## Custom feature XML
+
+To support provisioning of various SharePoint resources (such as List Templates, Pages, or Content Types), custom feature XML may also be injected into the package. This is used to provision resources necessary for applications, but may also be used for web parts. The documentation for Feature XML is located at [Feature.xml Files](../../../schema/feature-xml-files.md).
+
+The packaging task looks for the custom feature XML in **./sharepoint/feature\_xml**. Every file in this folder is included in the final application package. However, the task relies on the contents of the **\_rels/** folder to determine which custom features are defined.
+
+Essentially, it assumes that each **.xml.rels** file is related to a **feature.xml** of the same name at the top level of the **feature_xml/**, and adds a relationship to the **AppManifest.xml.rels** file that includes that feature in the package.
+
+## See also
+
+- [SharePoint Framework Overview](../../sharepoint-framework-overview.md)

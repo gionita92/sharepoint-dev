@@ -1,0 +1,44 @@
+---
+title: "ActivationDependencies element (Solution)"
+description: Discusses the definition, elements, and attributes for ActivationDependencies element (Solution).
+manager: soliver
+ms.date: 07/12/2022
+ms.audience: Developer
+ms.topic: reference
+ms.localizationpriority: medium
+api_name:
+- Solution Schema
+api_type:
+- schema
+ms.assetid: d6ea8200-bea4-4366-9244-e0eceda99942
+---
+
+# ActivationDependencies element (Solution)
+
+**Applies to:** SharePoint 2016 | SharePoint Foundation 2013 | SharePoint Online | SharePoint Server 2013
+
+Specifies the activation dependencies for a solution.
+
+```xml
+<ActivationDependencies />
+```
+
+## Elements and attributes
+
+The following sections describe attributes, child elements, and parent elements.
+
+### Attributes
+
+None
+
+### Child elements
+
+- [ActivationDependency](activationdependency-element-solution.md)
+
+### Parent elements
+
+- [Solution](solution-element-solution.md)
+
+## Example
+
+For an example of how this element is used, see [Solution schema](solution-schema.md).

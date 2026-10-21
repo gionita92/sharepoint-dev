@@ -1,0 +1,51 @@
+---
+title: ActionVariables element (WorkflowActions)
+description: Discusses the definition, elements and attributes for ActionVariables element (WorkflowActions) which specifies local variables for the action.
+manager: laurawi
+ms.date: 07/12/2022
+ms.audience: Developer
+ms.topic: reference
+f1_keywords:
+- SharePoint workflows
+ms.localizationpriority: medium
+ms.assetid: e2a0b47f-ca1c-4008-b824-e8936f4c8f4a
+---
+
+# ActionVariables element (WorkflowActions)
+
+**Applies to**: SharePoint 2016 | SharePoint Foundation 2013 | SharePoint Online | SharePoint Server 2013
+
+Specifies local variables for the action.
+
+## Definition
+
+```XML
+<Actions>
+  <Action>
+    <ActionVariables></ActionVariables>
+    <ActionBody></ActionBody>
+    <ActionConditions></ActionConditions>
+  </Action>
+</Actions>
+```
+
+## Elements and attributes
+
+The following sections describe attributes, child elements, and parent elements.
+
+### Attributes
+
+None
+
+### Child elements
+
+None
+
+### Parent elements
+
+- [Action](action-element-workflowactions.md)
+
+## See also
+
+- [Creating Declarative, No-Code Workflow Editors](https://msdn.microsoft.com/library/60dfda8d-e724-4d7d-9578-aa239c362dcf(Office.15).aspx)
+- [Workflow Actions Schema Overview](https://msdn.microsoft.com/library/25da07cb-b228-43f2-9cdf-c8c71c3eabbb(Office.15).aspx)

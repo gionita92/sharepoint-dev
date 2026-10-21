@@ -1,0 +1,11 @@
+{
+  "name": "spfx-docs",
+  "version": "0.1.0",
+  "description": "Offline SharePoint Framework (SPFx) and SharePoint developer docs from sp-dev-docs, searchable by Claude through a skill.",
+  "author": {
+    "name": "Georgian Ionita",
+    "email": "ionitageorgian@gmail.com"
+  },
+  "license": "CC-BY-4.0",
+  "keywords": ["sharepoint", "spfx", "documentation", "m365"]
+}

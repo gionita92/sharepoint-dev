@@ -1,0 +1,266 @@
+---
+title: SharePoint Framework enterprise guidance
+description: The background, benefits, and knowledge that administrators need to successfully manage SharePoint Framework-based components within their SharePoint environments.
+ms.date: 03/16/2026
+ms.localizationpriority: high
+---
+
+# SharePoint Framework enterprise guidance
+
+The SharePoint Framework (SPFx) is a new development model for SharePoint user interface extensibility. It's used by first and third parties, complementing existing customization, and extensibility options such as the SharePoint add-in model. The SharePoint Framework allows for a structured and supported approach to enrich and extend the user interface of SharePoint by using client-side frameworks. Based on modern web standards, it offers a unique set of features to make SharePoint customizations broadly available for developers and enterprises, but at the same time aligns with previous models and patterns in SharePoint. On this page, we provide administrators with the background, benefits, and knowledge they need to successfully manage SharePoint Framework-based components within their SharePoint environments.
+
+## Background
+
+SharePoint has been used as an application and development platform for a long time and offered many sets of development and customization options ranging from full trust code executing on the SharePoint servers, to sandboxed solutions, add-ins, and interface customizations achieved by using out-of-the box features or JavaScript/CSS embedding.
+
+Within multi-tenant SharePoint Online, full trust code has never been supported, and the sandboxed code service has been deprecated. The most common patterns for customizations of SharePoint Online have been either through add-ins, remote-code execution (*code executing elsewhere, such as in Azure*) through the standard APIs, and JavaScript embedding. Although JavaScript embedding has been a powerful way of extending SharePoint, it has also proven difficult to keep up with the evergreen model of SharePoint Online. The SharePoint Framework aims to solve these issues by providing a standardized framework on how to create custom user interface extensions and building applications on top of SharePoint Online in a supported and future prepared way.
+
+The SharePoint Framework extends the SharePoint user interface with *client-side web parts* and *extensions*.
+
+### Client-side Web Parts
+
+Client-side web parts implement the well-known paradigm of web parts, which has been one of the success factors of SharePoint over the years. They can be added to pages and independently customized by the end users. These client-side web parts work on the new modern pages and in classic pages and even in the SharePoint mobile app.
+
+> [!NOTE]
+> For more information, see [Overview of SharePoint client-side web parts](web-parts/overview-client-side-web-parts.md).
+
+### Extensions
+
+SPFx extensions enable developers to implement certain user interface customizations in the "modern" experience that were possible in the SharePoint "classic" experience. Developers can add JavaScript to any page, add page headers and footers, add menu items to list and libraries, and customize the view of a field in a list.
+
+### Development model and tooling
+
+The SharePoint Framework is built from the ground up using a modern web stack based on TypeScript, JavaScript, HTML, and CSS. All parts of the generated artifacts are executed in the end user's browser. The SharePoint Framework also comes with a new set of tooling. This new tooling is platform-agnostic and works on Windows, macOS, Linux, and is based on open-source technologies such as [Node.js](https://nodejs.org/), [Heft](https://rushstack.io/pages/heft/overview/), [Webpack](https://webpack.js.org/), and [Yeoman](https://yeoman.io/). These frameworks and tools are used at build time to streamline the developer experience for building, packaging, and deploying; they aren't required for the actual execution of the SharePoint Framework code.
+
+## Current status of SharePoint Framework
+
+The SharePoint Framework was released to SharePoint Online in February 2017. The latest version, and all previous versions, of the SharePoint Framework are hosted and available in SharePoint Online.
+
+The SharePoint Framework is also available for SharePoint Server 2016 (with Feature Pack 2) as version v1.1 and SharePoint Server 2019 as version v1.4.1.
+
+## From a developer's point of view
+
+SharePoint developers, new and seasoned, all have something to gain from the SharePoint Framework. It allows the developer to, in a safe and structured way, extend the user interface capabilities of SharePoint by using client-side components. These components are executed client-side and can work with data in SharePoint, in Microsoft 365 via the [Microsoft Graph](https://developer.microsoft.com/graph), or even by using your own custom web APIs that use standard OAuth and REST methods.
+
+A seasoned SharePoint developer will be familiar with the concepts, such as web parts and the SharePoint data model. However, the tooling for building, packaging, and deploying client-side web parts will be new. Developers need to gain skills in specifically [TypeScript](https://www.typescriptlang.org/), which is the primary language for developing SharePoint Framework artifacts. TypeScript adds several benefits on top of JavaScript, important for enterprise development, such as strongly typed objects, object inheritance, classes and interfaces, concepts that all should be familiar to current .NET, Java, and C/C++ developers. From a building and packaging point of view, developers no longer have Visual Studio as the only option to write SharePoint solutions; thanks to using open-source technologies and projects such as node.js, [npm](https://www.npmjs.com/), and Gulp, SharePoint Framework development can be done on any platform with the developers' preferred code editor or IDE, for example Visual Studio Code, Sublime, or even Notepad.
+
+For developers that have never built SharePoint solutions previously, but are familiar with modern web technologies, there isn't a significant learning curve. Many developers have already moved to client-side development, or a combination of it. Client-side development can provide a better, more dynamic, and more responsive experience for users and even an easier experience for developers. Thanks to the freedom of the code editor, the use of well-known and popular open-source frameworks and technologies, many developers that might not have worked within the Microsoft ecosystem can easily get up to speed on building SharePoint extensions.
+
+One of the most common patterns in SharePoint Online extensibility has been the usage of JavaScript embedding (also known as JavaScript injection). This is a method where you use, for example, the Script Editor web part to insert arbitrary JavaScript on the page, and then use web browser DOM (Document Object Model) manipulation to inject HTML, CSS, and JavaScript to build a solution or application. This method has many disadvantages, and in many cases, even prohibited customers from taking advantage of the new features in SharePoint Online, because of its hard dependencies on how SharePoint built up the HTML and CSS structure. The SharePoint Framework allows a better way, although not yet a complete replacement, for these JavaScript embed customizations. The SharePoint Framework, as said, uses TypeScript, which allows for a fairly easy transition of the JavaScript embeds to something standardized and future proof. The Microsoft 365 PnP (Patterns and Practices) initiative also has example projects and guidelines on how to make this transition.
+
+## In perspective: SharePoint Framework in the broader SharePoint platform
+
+The SharePoint Framework is a new model, an addition to already existing methods, but focused on leveraging more value to user interface customizations such as client-side web parts. This framework is designed to work in conjunction with already existing working models and makes it easier to create new user interface customizations in a more supported and sustainable way.
+
+> [!IMPORTANT]
+> The SharePoint page [HTML DOM](https://www.w3.org/TR/WD-DOM/introduction.html) is not an API. You should avoid taking any dependencies on the page DOM structure or CSS styles, which are subject to change and potentially break your solutions. SharePoint Framework provides a rich API to customize the SharePoint experience in reliable ways and is the only supported means to interact with the SharePoint page HTML DOM.
+
+### Compared with add-ins
+
+SharePoint Add-ins, introduced in SharePoint 2013 as SharePoint Apps but later renamed, have been one of the only available options of adding customizations to SharePoint Online in a supported and governed way. However, SharePoint Add-ins require a lot more infrastructure than necessary in many cases where a simple user interface customization is needed.
+
+SharePoint Add-ins come in two flavors: SharePoint-hosted and provider-hosted. SharePoint-hosted add-ins have been one of the ways of executing client-side code in SharePoint in a supported way, but as said require a lot more effort than necessary to just include a simple client-side (JavaScript) web part. In many cases SharePoint-hosted add-ins were built just to deploy artifacts, such as lists and web parts, onto a SharePoint site. These add-ins live in a "special" site called the App Web, which is a site with limited features.
+
+Provider-hosted add-ins are add-ins that are executed remotely from SharePoint (Online) and can leverage server-side code and client-side code. This has a benefit for ISVs that want to protect their intellectual property/code/logic and for scenarios that can't be executed client-side by using JavaScript, such as long-running, calculation-heavy operations or access to remote data that can't be achieved by using client-side scripting.
+
+The primary advantage of add-ins is isolation: because the actual code isn't executed in the SharePoint site browser, cross-site scripting protections prevent the add-in from getting the same access as the user has. Add-ins are limited to the permissions that the add-in was granted at install time. This makes add-ins a safer option for scenarios where an admin acquires an add-in from a third party, and it also allows Microsoft to have a Store from where you can download add-ins.
+
+The SharePoint Framework works side by side with both SharePoint-hosted and provider-hosted add-ins, but can also be used as an alternative in scenarios where only client-side scripting is required. For example, add-ins can add app parts to the site where they are hosted. These app parts are similar to web parts, but instead of running in the context of the page, they run in their own domain (App Web or provider-hosted web) within an `<iframe>` on the page. This prevents the add-in from gaining the user context from the rest of the page.
+
+The SharePoint Framework doesn't run in an Iframe. Thanks to this, it can more seamlessly run in the context of the page with the full power of the user viewing the part. This is the key to enabling it to run with rich functionality, but at the same time this means that it doesn't have the same level of security controls as add-ins. SharePoint Framework solutions are due to this also being referred to as *full trust client-side solutions*. Iframes suffer from the problem that they aren't responsive, which results in the rendered webpage not being as fluent on a mobile phone or alternate screen size.
+
+The SharePoint Framework solutions don't, at the time of writing, have a store where you can download and install solutions, because of the security aspect mentioned earlier. In many scenarios, using the user's context is a wanted scenario where SharePoint Framework could be used instead.
+
+### Embedding JavaScript in HTML
+
+One of the more popular approaches used by developers has been to use a method called embedding JavaScript (also known as JavaScript injections). That means that arbitrary JavaScript has been inserted to the sites and pages by using, for example, Custom Actions, master pages, or page layouts, and even Script Editor web parts. This method has proven simpler than creating SharePoint-hosted add-ins, and allows the script code to run in the full context of the users, and that's why it gained popularity. The downside with this approach is that many of these embeddings relied on DOM manipulation and required developers' skills to do and maintain.
+
+Because of the evergreen nature of SharePoint Online, these solutions built by embedding JavaScript could potentially break whenever SharePoint Online was updated, because the developers might have taken dependencies (even accidentally) on how the SharePoint pages are structured or styled. When updates are done in SharePoint, even minor and subtle, it can have huge impacts on these solutions and cause the embedded JavaScript to break completely.
+
+Now with the SharePoint Framework, there's a Microsoft standardized and supported way to achieve many of these solutions previously built by using JavaScript embeddings.
+
+### Script Editor web parts
+
+The most common way of inserting arbitrary HTML, JavaScript, or CSS customizations in SharePoint is to use the Script Editor web part or the Content Editor web part. Script Editor web parts have gained popularity because of how easy it's to add custom scripts to any page. Any editor of a site can add a Script Editor web part to a page, copy, and paste JavaScript into it, and have that JavaScript do the necessary customizations. As with JavaScript embeddings, it can be a challenging task for administrators to have control of Script Editor web parts.
+
+The SharePoint Framework can in many cases be a direct replacement for these Script Editor web part configurations.
+
+### Control of scripting capabilities in SharePoint Online
+
+SharePoint Online allows the admins to control the ability to add custom scripts to sites and pages to increase the security and integrity of the tenant. This is done by using the "Custom Script" feature in the SharePoint Online admin site, or individually per site by using PowerShell.
+
+Custom scripts can be disabled on all sites or just on personal sites. By default, new tenants have scripting disabled on personal sites, all self-service created sites, and the root site collection of the tenant.
+
+When custom scripts are disabled, editors of sites aren't allowed to add web parts such as the Script Editor web part. However, SharePoint Framework solutions are allowed because they are considered safe after being approved by an administrator in the app catalog.
+
+## Differences in how SharePoint Framework solutions are created, and why it matters
+
+The SharePoint Framework uses a new paradigm to SharePoint developers in how to design, build and deploy SharePoint customizations, by leveraging a modern web stack approach and focusing on client-side/browser based customizations.
+
+This marks an important change in how SharePoint development is being treated.
+
+By using technologies and frameworks such as TypeScript, Node.js, Yeoman, Heft, and more, the SharePoint Framework attracts developer audiences that traditionally haven't been in the SharePoint, or even Microsoft, ecosystem, while at the same time, opens the doors for existing SharePoint developers to build SharePoint customizations by using a more modern and standardized approach.
+
+### Creating solutions
+
+Because of the need for specific and targeted tools provided via Visual Studio, SharePoint development was done via Visual Studio on a Windows-based development environment with a locally installed and configured instance of SharePoint. This limited the hardware and user preferences and increased development costs. The SharePoint Framework, on the other hand, uses various common open-source web tools available for many different platforms, like macOS and Linux, to allow for more flexibility in development.
+
+SharePoint Framework solutions are created by using a tool called [Yeoman](https://yeoman.io/) along with a specific SharePoint Framework generator, which is based on Node.js. Yeoman is a project scaffolding tool that will create your project and generate the required artifacts, install the needed Node.js packages, and configure the build system.
+
+After the project is generated, it can be edited in any editor on any operating system such as Visual Studio, Visual Studio Code, Sublime, or Atom. This allows for a wider usage preference and style, in and between teams. The Yeoman generator can be run multiple times on the same project to add additional artifacts, such as client-side web parts.
+
+### Developing and building solutions
+
+The build system is based on [Heft](https://rushstack.io/pages/heft/overview/) (starting with SPFx v1.22.0; earlier versions used Gulp as the legacy toolchain). Heft is a build system from the RushStack project that builds, packages, and optionally deploys the SharePoint Framework artifacts. Like Yeoman, Heft is also based on Node.js and allows developers to build and deploy on any operating system.
+
+One part of the build toolset for SharePoint Framework is the *Workbench*. The Workbench is a tool where the developer can host and test their SharePoint Framework solution. The Workbench is reactive and will automatically reload your artifacts when the developer saves a file so that developers can see and test the solution quickly.
+
+There are two versions of the Workbench. One version exists outside of SharePoint, hosted locally on the development machine that runs offline without SharePoint access and SharePoint data. This allows the team and designers to build and design solutions with mock or fake data to focus on the user interface.
+
+The other version of the Workbench is hosted inside SharePoint and is used when you need to test and verify the SharePoint Framework solution by using real SharePoint data and context.
+
+> [!IMPORTANT]
+> The local Workbench requires a modern evergreen browser. Internet Explorer 11 is not supported and has been retired by Microsoft as of June 2022.
+
+### Deploying SharePoint Framework solutions
+
+Deploying SharePoint Framework solutions is done by deploying a solution package to the app catalog and approving it for use in your tenant or site collection.
+
+For solutions deployed to SharePoint Online, you can use the Microsoft 365 hosted CDN for storing and serving up the artifacts in the solution that are used to implement the client-side components. For more information, see the section [Microsoft 365 Public CDN](#microsoft-365-public-cdn).
+
+For solutions deployed to SharePoint Server, you'll need to determine where your artifacts will be stored. This is an additional deployment step that isn't required by SharePoint Online. The only requirement is that the artifacts are accessible by the users of your solution.
+
+#### Alternatives to the SharePoint Online CDN
+
+Developers of the SharePoint Framework solution can choose to use any CDN service, such as Azure Storage, Azure CDN, or even SharePoint itself, preferably by using the SharePoint CDN features (see later in this document). Using a public CDN, where the assets deployed to the CDN are publicly available on the Internet, allows for usage of the SharePoint Framework solution to be used by many tenants. In a SharePoint CDN-deployed SharePoint Framework solution, the deployed scripts, and resources are only available for the tenant it's deployed into.
+
+By default, there's a built-in task in the build tools to deploy the packaged solution to Azure Blob storage. This is something that is typically extended, by SIs or ISVs, to support custom CDN locations or configurations.
+
+After changing the code and building the solution, the SharePoint Framework toolchain produces a new solution package (**\*.sppkg**) and a set of script files. These script files include a unique hash in their file name, which indicates that the contents of these files differ from their previously deployed versions. To use a new version of the solution, you must deploy the new set of scripts to your CDN and update the solution package in the app catalog. While theoretically you could replace the contents of the existing script files and avoid upgrading the solution package, it's unreliable and not recommended. Depending on the configuration of your CDN, it could be that the previously downloaded script files are cached for a long time on the client computers, complicating the rollout of the solution to end users.
+
+The location of the CDN is important. The location where the SharePoint Framework assets are hosted must have high availability, so trusted CDN providers such as Azure, Akamai, or similar, and SharePoint itself, are recommended. From a security standpoint, it's important to know what CDNs are in use by the SharePoint Framework solutions deployed. A broken CDN can also break the SharePoint Framework solutions, and in the worst case scenario, a compromised CDN might lead to the data in the SharePoint (Online) tenant also being compromised.
+
+When approving third-party SharePoint Framework solutions, a typical checklist item is to check the authority and trust of the CDN location and any third parties that might host them. This is because after the application is installed and used within SharePoint site collections, these site collections have a dependency on the CDN location. As of this writing, there's no easy way to control that end point. The third-party provider of the CDN can update with both wanted and unwanted changes without the users' knowledge, opening an attack surface, given that the SharePoint Framework is running under the users' context and can do whatever the users can do.
+
+A recommendation is for IT administrators to keep track of what CDNs are used and what CDNs are approved by the organization, which should also be communicated to the enterprise developers.
+
+### Microsoft 365 Public CDN
+
+The [Microsoft 365 Public CDN](/microsoft-365/enterprise/content-delivery-networks) is a new capability in Microsoft 365 and SharePoint Online that allows administrators to automatically host static assets such as JavaScript files, images, and CSS styles in a CDN to provide better performance. The Microsoft 365 Public CDN is a geo-distributed caching feature that keeps static assets as close to the end users' browsers requesting them.
+
+Administrators can enable the Microsoft 365 Public CDN capability on one or more document libraries, which will serve as the origin for the static assets. Administration of the libraries and the CDN is done by using the SharePoint Online PowerShell cmdlets. The assets in the document library will be replicated to the Microsoft 365 CDN and be accessible through the Microsoft 365 Public CDN URLs generated and associated with the document library. Any updates to the assets will be reflected on the CDN end-points within 15 minutes. Any assets within the document libraries will be available for anonymous users, through the CDN end point.
+
+## SharePoint Framework in the enterprise
+
+SharePoint is and has been one of the most successful enterprise collaboration platforms, and one of the reasons for its success is extensibility options and to use it as a platform for applications and integrations. The SharePoint Framework will further expand this success by making SharePoint a more modern platform on which to build client-side customizations in a supported and standardized way.
+
+### Enterprise developers
+
+The SharePoint Framework allows **Enterprise developers**, typically developers that create applications for use within an organization, to extend SharePoint (Online) with new functionality in a structured and supported way. The SharePoint Framework offers everything from the development framework and build pipeline to the actual deployment, and allows the developers in a short time to reach out to all site collections with new solutions and features, all controlled by the app catalog. In an enterprise scenario, you also have full control of the CDN locations, external, or internal in SharePoint, and you can easily deploy fixes and updates to your whole organization.
+
+Within your enterprise, administrators and developers jointly should create a *blue print* for how SharePoint Framework solutions should be deployed. The blue print should contain details on preferred client-side frameworks, CDN locations, and so on.
+
+For more information, see the section [Building a plan around SharePoint Framework customizations](#building-a-plan-around-sharepoint-framework-customizations).
+
+### Citizen developers
+
+Citizen developers have for a long time used SharePoint to build business applications by using many methods and techniques.
+
+SharePoint Framework will, for certain scenarios — specifically JavaScript embeddings and Script Editor web part solutions — be one good way forward. This helps to make these solutions more standardized and maintainable over time. For citizen developers, there might be a learning curve to adjust to this new structured way of building solutions, but it will in the long run prove to be more stable, secure, and maintainable.
+
+Given that the above mentioned *Custom Script* control methods are in place, the citizen developers won't be allowed to add arbitrary JavaScript code or Script Editor web parts. This can potentially make your SharePoint environment more stable and maintainable, but at the same time you might prohibit innovation in your company, so you should make sure that your citizen developers align with your enterprise developers on using SharePoint Framework going forward.
+
+### User experience designers and front-end developers
+
+For web developers or user experience/interface designers, the SharePoint Framework will be valuable. The Workbench allows front-end developers to work with a SharePoint Framework solution on any operating system and by using their preferred editing tools without SharePoint, given that they use mock data, and focus on the user experience.
+
+The SharePoint Framework is released in parallel with [Fluent UI](https://developer.microsoft.com/fluentui#/), which is the official front-end development framework for Microsoft 365, and allows user experience designers to create a seamless experience across Microsoft 365 and custom-built solutions.
+
+### System Integrators (SI)
+
+If you leverage System Integrators (SI) or consultancies to build your SharePoint and Microsoft 365 solutions, you should place recommendations, or even requirements, on how they should build SharePoint Framework solutions so that they're aligned with your enterprise plan for the SharePoint Framework.
+
+Typically, System Integrators have a preferred way of building their solutions, which might not always be aligned with your governance, so this discussion with the System Integrators is important and will in the end make it easier for all parties.
+
+A typical scenario with System Integrators is that they build the solution for your company, and after the project is complete, it's up to you to maintain, upgrade, and update the solution, which only emphasizes that you need to align with the SI on how the SharePoint Framework solutions are built and hosted.
+
+### Independent software vendors (ISV)
+
+Independent software vendors (ISV) are organizations building third-party solutions for the mass market, and they might not always fulfill your plan on SharePoint Framework solutions. Also, ISVs typically own their own code and intellectual property, which makes it hard for you to change the way they implement and host their solutions.
+
+When using SharePoint Framework solutions from third-party providers, you need to specifically consider how they manage updates and how their solutions are hosted. For example: Do you allow the solution to be updated without your knowledge? Do you allow the static assets to be hosted on the ISV's CDN without your control? What is your trust relationship with this ISV?
+
+Remember that any client-side code in SharePoint Framework executes under the current users' context, and there's no possibility for you to put constraints on that, which you can do with SharePoint Add-ins.
+
+## Building a plan around SharePoint Framework customizations
+
+When introducing SharePoint Framework as one of the tools to extend your SharePoint (Online) instances, you need to plan for it. The plan should start with introducing the new technology stack used when building SharePoint Framework solutions. Developers may need training on using TypeScript as the primary language for writing the SharePoint Framework code.
+
+Another facet of the SharePoint Framework developers may need to learn is the actual toolchain for SharePoint Framework, including Node.js, NPM, and Heft, and how you use the different build tasks to build, package, and deploy solutions. A good starting resource for this is the [official SharePoint Framework documentation](./sharepoint-framework-overview.md) or the [SharePoint GitHub repositories](https://github.com/SharePoint/).
+
+Developers might want to standardize on one specific client-side framework for the organization or on different frameworks. Client-side frameworks include, but aren't limited to, React, Knockout, Angular, Handlebars, jQuery etc. There are advantages to standardizing on one framework, since that enables developers to build more reusable code and have better consistency in how they build and maintain their solutions.
+
+There are advantages of allowing more than one framework since each client-side framework has its pros and cons and use cases. But allowing any client-side framework may cause fragmentation in your enterprise solutions, not to mention having multiple different frameworks might add to the page load time, since many frameworks require loading of more external libraries.
+
+Out-of-the-box, the SharePoint Framework Yeoman generator has templates for two client-side frameworks: React and Knockout. Over time, one can expect that the community adds more generators or subgenerators to use other client-side frameworks. Choosing React as your preferred client-side framework has an advantage because Microsoft has created a React version of Fluent UI, so you'll get the Microsoft 365 look and feel in your customization if that is something your organization prefers.
+
+The fourth thing is how and where you deploy your solution artifacts, that is, what CDN your generated script bundles and assets are stored in. Out-of-the-box, the build tasks included in the toolchain support Azure Blob storage and Azure CDN. This might be a good option if you can manage an Azure subscription and share your assets between multiple tenants. Another common scenario is to use SharePoint Online, and its CDN feature, as a host for the artifacts. Starting from the SharePoint Framework v1.4, static assets are by default packaged in the SharePoint Framework package. When this package is deployed in the app catalog, they're automatically hosted either from Microsoft 365 CDN (if enabled) or from an app catalog URL.
+
+Finally, developers will need to think about application life-cycle management (ALM): the way you manage source code and versioning, automatic build, testing, and deployment and so on. Most common source code versioning systems can be used, such as Git, GitHub, or Azure DevOps.
+
+For continuous integration, there are no default tools, and you can use your tool of preference that supports Node.js, such as Azure DevOps, GitHub Actions, or Jenkins. Using these tools, you can automate the build and testing process and if there's a successful and approved build, you can even automatically deploy the artifacts to the CDN location, and in such a way automate everything from the developer checking in the code to deployment to production.
+
+## Management capabilities of SharePoint Framework solutions
+
+All SharePoint Framework solutions deployed into a tenant must be approved by a tenant administrator. This is done by uploading the SharePoint Framework package, the **\*.sppkg** file into the *Apps for SharePoint* library. When a new solution is added to the library, the administrator gets a dialog that asks for a consent to approve the solution for use in the tenancy. The dialog explains that this is a *full trust client-side code* solution without any resource restrictions and that it executes under users' context. The dialog also shows from what domain it will primarily get content, that is the CDN location of the SharePoint Framework scripts. Any SharePoint Framework application can load data from other locations, after the initial load from the CDN. Once approved, the SharePoint Framework solution can be enabled on any site collection.
+
+![SharePoint Framework app catalog trust dialog](../images/enterprise-guidance-trust-spfx-dialog.png)
+
+An administrator of the app catalog can at any time remove the package from the app catalog by removing the solution package from the **Apps for SharePoint** library. This will prohibit the solution to be used in all site collections. The solution can also be disabled by modifying the *Enabled* property of the uploaded package. This will immediately disable the solution in all site collections; existing pages that use client-side web parts won't render the web part, and the app won't be available on the site collections or available to add on existing site collections. When removing a SharePoint Framework solution, it won't remove any data or information created by the actual client-side solution either in SharePoint or in any external data source used by the solution.
+
+The administrator can also modify other properties on the package in the app catalog to enhance the *visibility* of the solution in the site collections; for example, the icon, category, description, and the featured status can be changed.
+
+If there's a need to update the solution package, which is required if new SharePoint Framework artifacts or other package level changes are made, the administrator only needs to upload a new version of the package to the library.
+
+A tenant admin can also monitor the SharePoint Framework solutions, as with SharePoint Add-ins. In the SharePoint Admin center under *apps*, the SharePoint admin can add the SharePoint Framework solutions and then see how many installed locations there are of a specific solution, for both SharePoint Add-ins and SharePoint Framework solutions.
+
+To enable a SharePoint Framework solution on a site collection, the site collection administrator must add it to the site collection. This is done in the same way as for SharePoint Add-ins, by selecting to *Add a new app* on the site collection, and then choosing the solution from the list of apps. Once the app is added, it's available for use in the site collection. The site collection administrator can also remove the SharePoint Framework from the site collection. This is done by going into *Site Contents* and then choosing *Remove* on the app.
+
+### SharePoint Framework deployment scopes
+
+When building SharePoint Framework solutions, developers can choose whether their solution supports tenant-wide deployment or if it must be deployed on each site separately. The latter is required when the solution needs to provision additional resources, such as lists, after being deployed to a site.
+
+While the developers building the solution decide if the solution supports tenant-wide deployment or not, it's the administrators who make the final decision on how the solution is deployed. Even if a solution could be deployed to all sites in the tenant, administrators can choose to deploy it only to the specific sites. If the solution doesn't support tenant-wide deployment, administrators can deploy it only to specific sites.
+
+> [!IMPORTANT]
+> Tenant-wide deployment is available only in SharePoint Online. In SharePoint hosted on-premises, SharePoint Framework solutions can be deployed only to specific sites.
+
+The SharePoint Framework doesn't have a store, which SharePoint Add-ins have. For this reason, any deployments always must be initiated by the tenant admin by adding and approving a solution package to the app catalog.
+
+### Backing up and restoring SharePoint Framework components
+
+SharePoint Framework solutions don't have any specific backup and restore features. The only thing that is recommended from an administrative perspective is that it might be a good idea to have a copy of all installed solution package files (**\*.sppkg**), if a solution package is by mistake removed from the app catalog. However, the app catalog is a SharePoint library and has the same capabilities as any document library, with major versioning turned on and the recycle bin.
+
+What you can't back up is the actual solution artifacts such as script bundles and assets that are hosted in a CDN. If you have control of the CDN or the CDN is a SharePoint site, you can back them up. If you are using SharePoint Framework solutions provided by a third party, there may be no way for your organization to back them up.
+
+## SharePoint Framework roadmap
+
+The SharePoint Framework reached General Availability (GA) in February 2017. General Availability means IT and developers can use SharePoint Framework in production in a supported manner. Beyond General Availability, we would expect the set of scenarios where we would see SharePoint Framework-based components built and used will expand beyond web part scenarios, and into areas like list and site customizations.
+
+For more information about the SharePoint Framework, see the dedicated [SharePoint Framework Roadmap](./roadmap.md).
+
+Major changes or introductions of new major features will be announced through the Microsoft 365 Message Center, found in your tenant admin, something that a Microsoft 365 administrator already should have on their daily routine to check. Another important resource is the [Microsoft 365 Developer blog](https://devblogs.microsoft.com/microsoft365dev/) where you'll find even more details and updates.
+
+## Support and SLA
+
+Microsoft doesn't provide support for custom solutions built for SharePoint through the regular SharePoint Online support channels. All issues related to building SharePoint solutions should be logged on GitHub at [https://github.com/SharePoint/sp-dev-docs/issues](https://github.com/SharePoint/sp-dev-docs/issues). The SharePoint Engineering group triages issues in this repository regularly and strives to respond to the incoming requests as quickly as possible.
+
+If your organization has a Premier Support agreement, then it should be the default channel for you to request support with any issues related to building SharePoint solutions. Microsoft escalation engineers will handle your requests according to their urgency.
+
+SharePoint Framework is designed to be backwards-compatible. Microsoft guarantees that solutions built using any of the generally available versions of the SharePoint Framework will keep working until an explicit deprecation notice for the specific version has been given in advance.
+
+## Summary
+
+The SharePoint Framework is a great new addition to and evolution of the SharePoint customization toolbox that allows developers to extend SharePoint in a supported and controllable way. SharePoint Framework, based on open source and modern technologies, lets developers extend your SharePoint enterprise development story not only to the SharePoint team, but also to a more diverse set of developers. As an administrator, providing proper governance and support for SharePoint Framework within your tenancy can empower your developers to build more engaging solutions more quickly, resulting in better efficiency all around.
+
+Since the SharePoint Framework is created for first- and third-party developers, and in growing use by Microsoft for future feature enhancements of SharePoint, it's also a safe bet for your organization. We can expect to see incremental updates and additions to the SharePoint Framework over time to close the feature gap between the classic SharePoint and the modern SharePoint experience.
