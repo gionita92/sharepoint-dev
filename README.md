@@ -21,13 +21,31 @@ Bundled areas: `spfx`, `general-development`, `declarative-customization`, `solu
 `scenario-guidance`, `business-apps`, `design`, `features`, `schema`. To change this list, edit `AREAS` in
 `scripts/sync-docs.py` and the area table in `SKILL.md`.
 
-## Use it locally
+## Install
+
+In Claude Code:
+
+```
+/plugin install spfx-docs --marketplace gionita92/sharepoint-dev
+```
+
+On older Claude Code versions, add the marketplace first:
+
+```
+/plugin marketplace add gionita92/sharepoint-dev
+/plugin install spfx-docs@sharepoint-dev
+```
+
+In GitHub Copilot CLI:
 
 ```sh
-claude --plugin-dir /path/to/spfx-docs-plugin
+copilot plugin marketplace add gionita92/sharepoint-dev
+copilot plugin install spfx-docs@sharepoint-dev
 ```
 
 Then just ask an SPFx question, or use `/spfx-docs how do I add a property pane to a web part?`.
+
+To try a local checkout without installing it: `claude --plugin-dir /path/to/spfx-docs-plugin`.
 
 ## Update the docs
 
@@ -36,10 +54,11 @@ cd ../sp-dev-docs && git pull && cd -
 python3 scripts/sync-docs.py ../sp-dev-docs     # the path defaults to ../sp-dev-docs
 ```
 
-## Sharing later
+## Releasing an update
 
-Push this folder to a GitHub repo and add `.claude-plugin/marketplace.json` at the repo root, listing this plugin.
-Others can then run `/plugin marketplace add <owner>/<repo>` and `/plugin install spfx-docs@<marketplace>`.
+After syncing the docs or changing the skill, bump `version` in both `.claude-plugin/plugin.json` and
+`.claude-plugin/marketplace.json`, then commit and push. Installed copies pick up the new version on
+`/plugin marketplace update sharepoint-dev`.
 
 ## License
 
