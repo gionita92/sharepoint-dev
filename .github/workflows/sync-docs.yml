@@ -1,0 +1,72 @@
+name: Sync sp-dev-docs
+
+on:
+  schedule:
+    - cron: "0 5 * * 1"   # Mondays 05:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out SharePoint/sp-dev-docs
+        uses: actions/checkout@v4
+        with:
+          repository: SharePoint/sp-dev-docs
+          path: upstream
+          fetch-depth: 1
+          sparse-checkout: |
+            docs
+            includes
+            LICENSE
+          sparse-checkout-cone-mode: false
+
+      - name: Sync docs
+        run: |
+          python3 scripts/sync-docs.py upstream 2> warnings.txt
+          cat warnings.txt >&2
+
+      - name: Detect changes
+        id: changes
+        run: |
+          sha=$(git -C upstream rev-parse --short HEAD)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          # SOURCE always changes with the upstream commit; only count real doc changes.
+          if [ -n "$(git status --porcelain -- skills/ ':!skills/sharepoint-docs/references/SOURCE')" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+          {
+            echo "warnings<<EOF"
+            cat warnings.txt
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Bump patch version
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          new=$(jq -r .version .claude-plugin/plugin.json | awk -F. '{print $1"."$2"."$3+1}')
+          jq --arg v "$new" '.version = $v' .claude-plugin/plugin.json > tmp.json && mv tmp.json .claude-plugin/plugin.json
+          jq --arg v "$new" '.plugins[0].version = $v' .claude-plugin/marketplace.json > tmp.json && mv tmp.json .claude-plugin/marketplace.json
+
+      - name: Open pull request
+        if: steps.changes.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: sync/sp-dev-docs
+          add-paths: |
+            skills/
+            .claude-plugin/
+          commit-message: "Sync docs from SharePoint/sp-dev-docs@${{ steps.changes.outputs.sha }}"
+          title: "Sync docs from sp-dev-docs@${{ steps.changes.outputs.sha }}"
+          body: |
+            Automated sync from https://github.com/SharePoint/sp-dev-docs/commit/${{ steps.changes.outputs.sha }}.
+            Review the diff, then merge to release the new version.
+
+            ${{ steps.changes.outputs.warnings }}
+          delete-branch: true

@@ -49,14 +49,26 @@ To try a local checkout without installing it: `claude --plugin-dir /path/to/spf
 
 ## Update the docs
 
+The [Sync sp-dev-docs](.github/workflows/sync-docs.yml) workflow runs every Monday (or on demand from the
+Actions tab). It runs the sync against the latest `SharePoint/sp-dev-docs`, and if anything changed it bumps the
+patch version and opens a PR on the `sync/sp-dev-docs` branch. Merging that PR releases the update. If the run
+flags a new upstream area, add it to `AREAS` or `SKIPPED` in `scripts/sync-docs.py`.
+
+The workflow needs "Allow GitHub Actions to create and approve pull requests" turned on under
+Settings → Actions → General.
+
+To sync by hand:
+
 ```sh
 cd ../sp-dev-docs && git pull && cd -
 python3 scripts/sync-docs.py ../sp-dev-docs     # the path defaults to ../sp-dev-docs
 ```
 
+`skills/sharepoint-docs/references/SOURCE` records which sp-dev-docs commit the bundle came from.
+
 ## Releasing an update
 
-After syncing the docs or changing the skill, bump `version` in both `.claude-plugin/plugin.json` and
+After a manual sync or a skill change, bump `version` in both `.claude-plugin/plugin.json` and
 `.claude-plugin/marketplace.json`, then commit and push. Installed copies pick up the new version on
 `/plugin marketplace update sharepoint-dev`.
 

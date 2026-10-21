@@ -4,6 +4,7 @@
 Usage: python3 scripts/sync-docs.py [path-to-sp-dev-docs-clone]
 """
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -18,6 +19,9 @@ AREAS = [
     "features",
     "schema",
 ]
+# Upstream folders we deliberately leave out; anything not here or in AREAS triggers a warning.
+SKIPPED = {"apis", "breadcrumb", "community", "embedded", "images", "sp-add-ins", "sp-add-ins-modernize",
+           "training", "transform"}
 DOC_SUFFIXES = {".md", ".yml"}
 NOT_INDEXED = {"toc.yml", "index.yml", "breadcrumb.yml"}
 
@@ -68,6 +72,16 @@ def sync_area(src_docs, area):
     return len(rows), sum(1 for _ in dest.rglob("*") if _.is_file())
 
 
+def upstream_commit(source):
+    """Return (sha, commit date) of the clone's HEAD, or ("unknown", "unknown") if it isn't a git checkout."""
+    try:
+        out = subprocess.run(["git", "-C", str(source), "log", "-1", "--format=%H %cs"],
+                             capture_output=True, text=True, check=True).stdout.split()
+        return out[0], out[1]
+    except (OSError, subprocess.CalledProcessError, IndexError):
+        return "unknown", "unknown"
+
+
 def main():
     source = Path(sys.argv[1]) if len(sys.argv) > 1 else PLUGIN_ROOT.parent / "sp-dev-docs"
     source = source.resolve()
@@ -88,6 +102,16 @@ def main():
     shutil.copy2(source / "LICENSE", REFS / "LICENSE")
     print(f"{'includes':28} {sum(1 for p in (REFS / 'includes').rglob('*') if p.is_file()):5} files")
     print(f"Total docs: {total}  ->  {REFS}")
+
+    sha, date = upstream_commit(source)
+    (REFS / "SOURCE").write_text(
+        f"repo: https://github.com/SharePoint/sp-dev-docs\ncommit: {sha}\ndate: {date}\n", encoding="utf-8")
+    print(f"Source: sp-dev-docs@{sha[:7]} ({date})")
+
+    new_areas = sorted(p.name for p in src_docs.iterdir() if p.is_dir() and p.name not in set(AREAS) | SKIPPED)
+    for name in new_areas:
+        print(f"warning: new upstream area docs/{name}/ is not bundled; add it to AREAS or SKIPPED",
+              file=sys.stderr)
 
 
 if __name__ == "__main__":

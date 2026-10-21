@@ -11,6 +11,9 @@ source of truth.
 
 All paths below are relative to this skill's folder (the folder containing this SKILL.md).
 
+`references/SOURCE` records the sp-dev-docs commit and date this copy was taken from. Read it when the user asks
+how current the docs are, or when a question is about something released after that date.
+
 ## Areas
 
 | Area | What's in it | Index |
