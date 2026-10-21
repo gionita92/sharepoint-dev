@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Copy the chosen sp-dev-docs areas into the skill and rebuild the per-area indexes.
+"""Sync the chosen sp-dev-docs areas into the skill and rebuild the per-area indexes.
+
+Only files whose content changed are written; files removed upstream are deleted.
 
 Usage: python3 scripts/sync-docs.py [path-to-sp-dev-docs-clone]
 """
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -46,17 +47,49 @@ def read_meta(path):
     return title, description
 
 
-def sync_area(src_docs, area):
+class Changes:
+    """Tracks which files under references/ were added, updated or removed."""
+
+    def __init__(self):
+        self.added, self.updated, self.removed = [], [], []
+
+    def __len__(self):
+        return len(self.added) + len(self.updated) + len(self.removed)
+
+    def write(self, target, data):
+        """Write bytes to target unless it already has exactly that content."""
+        exists = target.is_file()
+        if exists and target.read_bytes() == data:
+            return
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+        (self.updated if exists else self.added).append(target.relative_to(REFS).as_posix())
+
+    def prune(self, root, keep):
+        """Delete files under root that aren't in keep, then any directories left empty."""
+        if not root.is_dir():
+            return
+        for path in sorted(root.rglob("*")):
+            if path.is_file() and path not in keep:
+                path.unlink()
+                self.removed.append(path.relative_to(REFS).as_posix())
+        for path in sorted(root.rglob("*"), reverse=True):
+            if path.is_dir() and not any(path.iterdir()):
+                path.rmdir()
+
+
+def sync_area(src_docs, area, changes, keep):
     src = src_docs / area
-    dest = REFS / "docs" / area
     rows = []
+    copied = 0
     for path in sorted(src.rglob("*")):
         if not path.is_file() or path.suffix not in DOC_SUFFIXES:
             continue
         rel = path.relative_to(src_docs)
         target = REFS / "docs" / rel
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(path, target)
+        changes.write(target, path.read_bytes())
+        keep.add(target)
+        copied += 1
         if path.name in NOT_INDEXED:
             continue
         title, description = read_meta(path)
@@ -66,10 +99,10 @@ def sync_area(src_docs, area):
         rows.append(row)
 
     index = REFS / "index" / f"{area}.md"
-    index.parent.mkdir(parents=True, exist_ok=True)
     header = f"# Index: {area}\n\nOne line per page: path (relative to references/) — title — description.\n\n"
-    index.write_text(header + "\n".join(rows) + "\n", encoding="utf-8")
-    return len(rows), sum(1 for _ in dest.rglob("*") if _.is_file())
+    changes.write(index, (header + "\n".join(rows) + "\n").encode("utf-8"))
+    keep.add(index)
+    return len(rows), copied
 
 
 def upstream_commit(source):
@@ -89,19 +122,32 @@ def main():
     if not src_docs.is_dir():
         sys.exit(f"Not an sp-dev-docs clone (no docs/ folder): {source}")
 
-    for sub in ("docs", "index", "includes"):
-        shutil.rmtree(REFS / sub, ignore_errors=True)
-
+    changes = Changes()
+    keep = set()
     total = 0
     for area in AREAS:
-        indexed, copied = sync_area(src_docs, area)
+        indexed, copied = sync_area(src_docs, area, changes, keep)
         total += copied
         print(f"{area:28} {copied:5} files  {indexed:5} indexed")
 
-    shutil.copytree(source / "includes", REFS / "includes")
-    shutil.copy2(source / "LICENSE", REFS / "LICENSE")
-    print(f"{'includes':28} {sum(1 for p in (REFS / 'includes').rglob('*') if p.is_file()):5} files")
+    includes = 0
+    for path in sorted((source / "includes").rglob("*")):
+        if path.is_file():
+            target = REFS / "includes" / path.relative_to(source / "includes")
+            changes.write(target, path.read_bytes())
+            keep.add(target)
+            includes += 1
+    changes.write(REFS / "LICENSE", (source / "LICENSE").read_bytes())
+    print(f"{'includes':28} {includes:5} files")
+
+    for sub in ("docs", "index", "includes"):
+        changes.prune(REFS / sub, keep)
     print(f"Total docs: {total}  ->  {REFS}")
+
+    for label, paths in (("added", changes.added), ("updated", changes.updated), ("removed", changes.removed)):
+        for p in paths:
+            print(f"  {label:8} {p}")
+    print(f"Changes: {len(changes.added)} added, {len(changes.updated)} updated, {len(changes.removed)} removed")
 
     sha, date = upstream_commit(source)
     (REFS / "SOURCE").write_text(

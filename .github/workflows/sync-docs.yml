@@ -29,8 +29,19 @@ jobs:
 
       - name: Sync docs
         run: |
+          touch warnings.txt
+          upstream=$(git -C upstream rev-parse HEAD)
+          last=$(sed -n 's/^commit: //p' skills/sharepoint-docs/references/SOURCE 2>/dev/null || true)
+          if [ "$upstream" = "$last" ]; then
+            echo "::notice title=Upstream unchanged::sp-dev-docs@${upstream:0:7} is the commit already bundled. Skipping sync."
+            exit 0
+          fi
+          echo "Syncing from SharePoint/sp-dev-docs@${upstream:0:7} (last bundled: ${last:0:7})..."
           python3 scripts/sync-docs.py upstream 2> warnings.txt
-          cat warnings.txt >&2
+          while IFS= read -r line; do
+            [ -n "$line" ] && echo "::warning title=Unbundled upstream area::${line#warning: }"
+          done < warnings.txt
+          echo "Sync finished."
 
       - name: Detect changes
         id: changes
@@ -38,8 +49,16 @@ jobs:
           sha=$(git -C upstream rev-parse --short HEAD)
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           # SOURCE always changes with the upstream commit; only count real doc changes.
-          if [ -n "$(git status --porcelain -- skills/ ':!skills/sharepoint-docs/references/SOURCE')" ]; then
+          changed_files=$(git status --porcelain -- skills/ ':!skills/sharepoint-docs/references/SOURCE')
+          if [ -n "$changed_files" ]; then
+            count=$(echo "$changed_files" | wc -l | tr -d ' ')
             echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "count=$count" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Docs changed::$count file(s) changed upstream since the last sync."
+            echo "$changed_files" | head -50
+            if [ "$count" -gt 50 ]; then echo "...and $((count - 50)) more"; fi
+          else
+            echo "::notice title=No changes::No new doc changes detected in sp-dev-docs@$sha. Skipping version bump and PR."
           fi
           {
             echo "warnings<<EOF"
@@ -48,13 +67,18 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Bump patch version
+        id: version
         if: steps.changes.outputs.changed == 'true'
         run: |
-          new=$(jq -r .version .claude-plugin/plugin.json | awk -F. '{print $1"."$2"."$3+1}')
+          old=$(jq -r .version .claude-plugin/plugin.json)
+          new=$(echo "$old" | awk -F. '{print $1"."$2"."$3+1}')
+          echo "new=$new" >> "$GITHUB_OUTPUT"
+          echo "Bumping plugin version $old -> $new"
           jq --arg v "$new" '.version = $v' .claude-plugin/plugin.json > tmp.json && mv tmp.json .claude-plugin/plugin.json
           jq --arg v "$new" '.plugins[0].version = $v' .claude-plugin/marketplace.json > tmp.json && mv tmp.json .claude-plugin/marketplace.json
 
       - name: Open pull request
+        id: pr
         if: steps.changes.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
@@ -70,3 +94,39 @@ jobs:
 
             ${{ steps.changes.outputs.warnings }}
           delete-branch: true
+
+      - name: Summary
+        if: always()
+        env:
+          SHA: ${{ steps.changes.outputs.sha }}
+          CHANGED: ${{ steps.changes.outputs.changed }}
+          COUNT: ${{ steps.changes.outputs.count }}
+          VERSION: ${{ steps.version.outputs.new }}
+          PR_OP: ${{ steps.pr.outputs.pull-request-operation }}
+          PR_URL: ${{ steps.pr.outputs.pull-request-url }}
+          WARNINGS: ${{ steps.changes.outputs.warnings }}
+        run: |
+          {
+            echo "## sp-dev-docs sync"
+            echo
+            if [ -z "$SHA" ]; then
+              echo "Sync failed before changes could be checked. See the step logs."
+            elif [ "$CHANGED" != "true" ]; then
+              echo "No new doc changes detected in \`sp-dev-docs@$SHA\`. Skipped version bump and PR."
+            else
+              echo "- Upstream: \`sp-dev-docs@$SHA\`"
+              echo "- Files changed: $COUNT"
+              echo "- New version: \`$VERSION\`"
+              case "$PR_OP" in
+                created) echo "- Opened PR: $PR_URL" ;;
+                updated) echo "- Updated existing PR: $PR_URL" ;;
+                "")      echo "- PR step did not complete. See the step logs." ;;
+                *)       echo "- PR: no changes to push (already up to date)" ;;
+              esac
+            fi
+            if [ -n "$WARNINGS" ]; then
+              echo
+              echo "### Warnings"
+              echo "$WARNINGS" | sed 's/^/- /'
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
