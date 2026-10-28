@@ -11,9 +11,14 @@
       "name": "spfx-docs",
       "source": "./",
       "description": "Offline SharePoint Framework (SPFx) and SharePoint developer docs from sp-dev-docs, searchable by Claude through a skill.",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "category": "documentation",
-      "keywords": ["sharepoint", "spfx", "documentation", "m365"]
+      "keywords": [
+        "sharepoint",
+        "spfx",
+        "documentation",
+        "m365"
+      ]
     }
   ]
 }
